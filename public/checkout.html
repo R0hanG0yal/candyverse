@@ -5,12 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CandyVerse 📋 Checkout</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <!-- CandyVerse DB layer -->
-  <script src="cv-db.js"></script>
-  <script>cvInitFirebase();</script>
+
 </head>
 <body>
 
@@ -94,5 +89,9 @@
 </div>
 
 <script src="checkout.js"></script>
+<!-- Firebase at bottom - never blocks page -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="cv-db.js"></script>
 </body>
 </html>

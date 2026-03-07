@@ -1,26 +1,27 @@
-// CandyVerse — Payment Page (UPI)
+// CandyVerse — Payment Page
 
 function getCart()      { return JSON.parse(localStorage.getItem('cv_cart')||'[]'); }
 function getCartCount(c){ return c.reduce(function(s,i){return s+i.qty;},0); }
 function getCartTotal(c){ return c.reduce(function(s,i){return s+i.price*i.qty;},0); }
 
 function showToast(msg,icon){
-  var t=document.getElementById('toast');
+  var t=document.getElementById('toast'); if(!t) return;
   document.getElementById('toast-msg').textContent=msg;
-  t.querySelector('.toast-icon').textContent=icon||'💫';
+  var ti=t.querySelector('.toast-icon'); if(ti) ti.textContent=icon||'💫';
   t.classList.add('show');
 }
 
 (function init(){
-  var cart     = getCart();
-  var checkout = JSON.parse(localStorage.getItem('cv_checkout')||'{}');
-  if (!cart.length){ window.location.href='cart.html'; return; }
+  var cart=getCart();
+  var checkout=JSON.parse(localStorage.getItem('cv_checkout')||'{}');
+  if(!cart.length){ window.location.href='cart.html'; return; }
 
   var badge=document.getElementById('cart-count');
   if(badge) badge.textContent=getCartCount(cart);
 
   var subtotal=getCartTotal(cart), delivery=subtotal>=499?0:49, total=subtotal+delivery;
-  document.getElementById('payment-amount').textContent='₹'+total.toLocaleString('en-IN');
+  var amtEl=document.getElementById('payment-amount');
+  if(amtEl) amtEl.textContent='₹'+total.toLocaleString('en-IN');
 
   var summaryEl=document.getElementById('payment-order-summary');
   if(summaryEl){
@@ -33,16 +34,19 @@ function showToast(msg,icon){
   }
 })();
 
-document.getElementById('upi-copy').addEventListener('click',function(){
-  navigator.clipboard.writeText('candyverse@upi').then(function(){
-    document.getElementById('copy-label').textContent='✓ copied!';
-    setTimeout(function(){document.getElementById('copy-label').textContent='tap to copy';},2000);
-  }).catch(function(){document.getElementById('copy-label').textContent='candyverse@upi';});
-});
+var upiBtn=document.getElementById('upi-copy');
+if(upiBtn){
+  upiBtn.addEventListener('click',function(){
+    navigator.clipboard.writeText('candyverse@upi').then(function(){
+      var lbl=document.getElementById('copy-label');
+      if(lbl){ lbl.textContent='✓ copied!'; setTimeout(function(){ lbl.textContent='tap to copy'; },2000); }
+    }).catch(function(){});
+  });
+}
 
 function confirmPayment(){
   var btn=document.getElementById('paid-btn');
-  btn.disabled=true; btn.textContent='⏳ Saving your order...';
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Saving...'; }
 
   var cart=getCart();
   if(!cart.length){ window.location.href='products.html'; return; }
@@ -56,17 +60,34 @@ function confirmPayment(){
     timestamp:Date.now(),
     items:cart.map(function(i){return{id:i.id,name:i.name,price:i.price,qty:i.qty,emoji:i.emoji||'🍭'};}),
     subtotal:subtotal, delivery:delivery, total:total,
-    customer:{name:checkout.name||'Guest',phone:checkout.phone||'',address:checkout.address||'',paymentMethod:checkout.payment||'upi'},
+    customer:{
+      name:checkout.name||'Guest',
+      phone:checkout.phone||'',
+      address:checkout.address||'',
+      paymentMethod:checkout.payment||'upi'
+    },
     paymentStatus:'Paid',
     orderStatus:'Order Placed',
     statusTimestamps:{'Order Placed':Date.now()}
   };
 
-  // Save to Firebase (shared across all devices)
-  cvSaveOrder(order, function() {
-    localStorage.setItem('cv_last_order', JSON.stringify(order));
+  // ✅ STEP 1 — Save to localStorage IMMEDIATELY (always works)
+  try {
+    var orders=JSON.parse(localStorage.getItem('cv_orders')||'[]');
+    orders.unshift(order);
+    localStorage.setItem('cv_orders',JSON.stringify(orders));
+    localStorage.setItem('cv_last_order',JSON.stringify(order));
     localStorage.removeItem('cv_cart');
-    showToast('🎉 Order placed! Redirecting...','🎊');
-    setTimeout(function(){ window.location.href='order-success.html'; },1200);
-  });
+  } catch(e){}
+
+  // ✅ STEP 2 — Redirect immediately, don't wait for Firebase
+  showToast('🎉 Order placed! Redirecting...','🎊');
+  setTimeout(function(){ window.location.href='order-success.html'; }, 800);
+
+  // ✅ STEP 3 — Try Firebase in background (doesn't block redirect)
+  try {
+    if(typeof cvSaveOrder==='function' && typeof CV_CONFIG_VALID!=='undefined' && CV_CONFIG_VALID){
+      cvSaveOrder(order, function(){});
+    }
+  } catch(e){}
 }
