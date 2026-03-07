@@ -140,42 +140,83 @@ function applyFilters(){
   renderOrders(filtered);
 }
 
+// ── Helper: get order from allOrders array ─────────────
+function getOrderById(orderId){ return allOrders.find(function(o){return o.id===orderId;})||null; }
+
+// ── Helper: save order to localStorage + Firebase ──────
+function saveOrderEverywhere(order, callback){
+  // Always save to localStorage first
+  try{
+    var orders=JSON.parse(localStorage.getItem('cv_orders')||'[]');
+    var idx=orders.findIndex(function(o){return o.id===order.id;});
+    if(idx>=0) orders[idx]=order; else orders.unshift(order);
+    localStorage.setItem('cv_orders',JSON.stringify(orders));
+    // Also update allOrders array
+    var ai=allOrders.findIndex(function(o){return o.id===order.id;});
+    if(ai>=0) allOrders[ai]=order;
+  }catch(e){}
+  // Try Firebase silently
+  try{
+    if(typeof cvSaveOrder==='function' && typeof CV_CONFIG_VALID!=='undefined' && CV_CONFIG_VALID){
+      cvSaveOrder(order,function(){});
+    }
+  }catch(e){}
+  if(callback) callback();
+}
+
 function updateOrderStatus(orderId, newStatus){
-  cvGetOrder(orderId, function(order){
-    if(!order) return;
-    order.orderStatus = newStatus;
-    if(!order.statusTimestamps) order.statusTimestamps={};
-    order.statusTimestamps[newStatus] = Date.now();
-    cvSaveOrder(order, function(){
-      showToast('✅ Status: '+newStatus, STEP_EMOJI[newStatus]||'📋');
-      syncToSheets(order);
-    });
+  var order = getOrderById(orderId);
+  if(!order) return;
+  order.orderStatus = newStatus;
+  if(!order.statusTimestamps) order.statusTimestamps={};
+  order.statusTimestamps[newStatus] = Date.now();
+  saveOrderEverywhere(order, function(){
+    showToast('✅ Status: '+newStatus, STEP_EMOJI[newStatus]||'📋');
+    syncToSheets(order);
+    renderStats();
+    applyFilters();
   });
 }
 
 function togglePayStatus(orderId){
-  cvGetOrder(orderId, function(order){
-    if(!order) return;
-    order.paymentStatus = order.paymentStatus==='Paid'?'Pending':'Paid';
-    cvSaveOrder(order, function(){ syncToSheets(order); });
+  var order = getOrderById(orderId);
+  if(!order) return;
+  order.paymentStatus = order.paymentStatus==='Paid'?'Pending':'Paid';
+  saveOrderEverywhere(order, function(){
+    syncToSheets(order);
+    renderStats();
+    applyFilters();
   });
 }
 
 function syncSingleToSheets(orderId){
   var url=getSheetWebhook();
   if(!url){alert('⚠️ Set your Google Sheets webhook URL first!');return;}
-  cvGetOrder(orderId, function(order){ if(order){ syncToSheets(order); showToast('📊 Synced!','✅'); } });
+  var order=getOrderById(orderId);
+  if(order){ syncToSheets(order); showToast('📊 Synced!','✅'); }
 }
 
 function deleteOrder(orderId){
   if(!confirm('Delete order '+orderId+'?')) return;
-  cvDeleteOrder(orderId, function(){showToast('Deleted','🗑');});
+  // Remove from localStorage
+  try{
+    var orders=JSON.parse(localStorage.getItem('cv_orders')||'[]');
+    localStorage.setItem('cv_orders',JSON.stringify(orders.filter(function(o){return o.id!==orderId;})));
+  }catch(e){}
+  allOrders=allOrders.filter(function(o){return o.id!==orderId;});
+  // Try Firebase
+  try{ if(typeof cvDeleteOrder==='function'&&typeof CV_CONFIG_VALID!=='undefined'&&CV_CONFIG_VALID) cvDeleteOrder(orderId,function(){}); }catch(e){}
+  showToast('Deleted','🗑');
+  renderStats();
+  applyFilters();
 }
 
 function clearAllOrders(){
   if(!allOrders.length) return;
   if(!confirm('⚠️ Delete ALL '+allOrders.length+' orders? Cannot be undone.')) return;
-  cvClearAllOrders(function(){allOrders=[];filtered=[];renderStats();renderOrders([]);});
+  try{ localStorage.removeItem('cv_orders'); }catch(e){}
+  try{ if(typeof cvClearAllOrders==='function'&&typeof CV_CONFIG_VALID!=='undefined'&&CV_CONFIG_VALID) cvClearAllOrders(function(){}); }catch(e){}
+  allOrders=[];filtered=[];renderStats();renderOrders([]);
 }
 
 function exportExcel(){
@@ -222,7 +263,7 @@ var s=document.createElement('style');
 s.textContent='@keyframes adminCardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}';
 document.head.appendChild(s);
 
-// ── Init — listen for REAL-TIME changes from Firebase ──
+// ── Init ───────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function(){
   var savedUrl=getSheetWebhook();
   var urlInput=document.getElementById('webhook-url');
@@ -234,13 +275,28 @@ window.addEventListener('DOMContentLoaded', function(){
   if(searchEl) searchEl.addEventListener('input',applyFilters);
   if(filterEl) filterEl.addEventListener('change',applyFilters);
 
-  // 🔥 Real-time listener — updates instantly when ANY device places an order
-  cvListenOrders(function(orders){
-    allOrders = orders;
+  // ✅ STEP 1 — Load from localStorage IMMEDIATELY (always works)
+  try {
+    var local = JSON.parse(localStorage.getItem('cv_orders') || '[]');
+    allOrders = local;
     renderStats();
     applyFilters();
     updateCountdownBadge();
-  });
+  } catch(e) {}
+
+  // ✅ STEP 2 — Try Firebase after a short delay (gives time for cv-db.js to load)
+  setTimeout(function(){
+    try {
+      if(typeof cvListenOrders === 'function' && typeof CV_CONFIG_VALID !== 'undefined' && CV_CONFIG_VALID) {
+        cvListenOrders(function(orders){
+          allOrders = orders;
+          renderStats();
+          applyFilters();
+          updateCountdownBadge();
+        });
+      }
+    } catch(e) {}
+  }, 500);
 });
 
 // ── Auto-sync to Google Sheets every 10 seconds ────────
