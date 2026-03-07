@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CandyVerse 🛒 Your Cart</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">🍭 CandyVerse</a>
+  <ul class="navbar-links">
+    <li><a href="products.html">🛍 Shop</a></li>
+    <li><a href="cart.html" class="active cart-badge">🛒 Cart <span class="badge" id="cart-count">0</span></a></li>
+    <li><a href="orders.html">📦 Orders</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🛒 Your Sweet Cart</h1>
+  <p id="cart-subtitle">Loading your goodies...</p>
+</div>
+
+<div class="cart-container" id="cart-container">
+  <!-- Injected by cart.js -->
+</div>
+
+<div class="toast" id="toast">
+  <span class="toast-icon">✅</span>
+  <span class="toast-msg" id="toast-msg"></span>
+</div>
+
+<script src="cart.js"></script>
+</body>
+</html>

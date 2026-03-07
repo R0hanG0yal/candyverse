@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CandyVerse 👑 Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* Sheets settings panel */
+    .sheets-panel {
+      background: rgba(255,255,255,0.55);
+      border: 2px solid rgba(0,180,255,0.25);
+      border-radius: 20px; padding: 1.8rem;
+      margin-bottom: 2rem;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 30px rgba(0,180,255,0.12);
+    }
+    .sheets-panel h3 {
+      font-family:'Fredoka One',cursive; font-size:1.3rem;
+      color:var(--text); margin-bottom:1rem;
+      display:flex; align-items:center; gap:0.5rem;
+    }
+    .sheets-panel .steps-guide {
+      background: rgba(0,180,255,0.07);
+      border-left: 4px solid rgba(0,180,255,0.5);
+      border-radius: 8px; padding: 1rem 1.2rem;
+      margin-bottom:1rem; font-size:0.88rem;
+      font-weight:700; color: var(--text-muted);
+      line-height:2;
+    }
+    .sheets-panel .steps-guide a { color:#0055aa; }
+    .webhook-row {
+      display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;
+    }
+    .webhook-row input {
+      flex:1; min-width:260px; padding:0.7rem 1.2rem;
+      background:rgba(255,255,255,0.75); border:2px solid rgba(0,180,255,0.3);
+      border-radius:99px; font-family:'Nunito',sans-serif;
+      font-size:0.9rem; font-weight:700; color:var(--text); outline:none;
+    }
+    .webhook-row input:focus { border-color:#00B4FF; box-shadow:0 0 16px rgba(0,180,255,0.25); }
+    #webhook-status {
+      font-weight:800; font-size:0.88rem;
+      padding:0.3rem 0.8rem;
+      background:rgba(255,255,255,0.5);
+      border-radius:99px; border:1.5px solid currentColor;
+    }
+    /* Filter bar inputs */
+    #admin-search, #admin-status-filter {
+      padding:0.65rem 1.2rem;
+      background:rgba(255,255,255,0.65);
+      border:2px solid rgba(255,26,108,0.25);
+      border-radius:99px;
+      color:var(--text);
+      font-family:'Nunito',sans-serif; font-size:0.95rem; outline:none;
+    }
+    #admin-search { flex:1; min-width:220px; }
+    #admin-search:focus, #admin-status-filter:focus {
+      border-color:#FF1A6C; box-shadow:0 0 16px rgba(255,26,108,0.2);
+    }
+    #admin-search::placeholder { color:rgba(61,0,64,0.4); }
+  </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- CandyVerse DB layer -->
+  <script src="cv-db.js"></script>
+  <script>cvInitFirebase();</script>
+</head>
+<body>
+
+
+
+<!-- Firebase not-configured warning -->
+<div id="firebase-warn" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#cc0044;color:#fff;padding:1rem 1.5rem;font-family:'Nunito',sans-serif;font-weight:800;font-size:.95rem;align-items:center;gap:1rem;justify-content:center;flex-wrap:wrap;">
+  ❌ Firebase not configured! Orders are only saving on THIS device.
+  <span id="fw-msg"></span>
+  Open <code style="background:rgba(255,255,255,.2);padding:.2rem .5rem;border-radius:6px;">public/cv-db.js</code>
+  and paste your Firebase config — then push to GitHub.
+</div>
+
+<!-- ── Password Gate ── -->
+<div id="pwd-gate" style="
+  position:fixed;inset:0;z-index:99999;
+  background:linear-gradient(135deg,#FFB3CF,#FF4D8F,#80D8FF);
+  display:flex;align-items:center;justify-content:center;
+">
+  <div style="
+    background:rgba(255,255,255,0.75);backdrop-filter:blur(20px);
+    border-radius:24px;padding:2.5rem 2rem;width:90%;max-width:380px;
+    box-shadow:0 20px 60px rgba(255,26,108,0.3);
+    border:2px solid rgba(255,77,143,0.25);text-align:center;
+  ">
+    <div style="font-size:3rem;margin-bottom:0.5rem;">👑</div>
+    <h2 style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#3d0040;margin-bottom:0.25rem;">Admin Access</h2>
+    <p style="color:#ad1457;font-weight:700;font-size:0.9rem;margin-bottom:1.5rem;">CandyVerse Dashboard</p>
+    <input id="pwd-input" type="password" placeholder="Enter admin password"
+      style="width:100%;box-sizing:border-box;padding:0.8rem 1.2rem;border-radius:99px;
+      border:2px solid rgba(255,77,143,0.35);font-family:'Nunito',sans-serif;
+      font-size:1rem;font-weight:700;color:#3d0040;outline:none;margin-bottom:0.75rem;
+      background:rgba(255,255,255,0.9);"
+      onkeydown="if(event.key==='Enter') checkPwd()"
+    />
+    <div id="pwd-error" style="color:#cc0044;font-weight:800;font-size:0.85rem;margin-bottom:0.75rem;display:none;">
+      ❌ Wrong password. Try again.
+    </div>
+    <button onclick="checkPwd()" style="
+      width:100%;padding:0.85rem;border:none;border-radius:99px;cursor:pointer;
+      background:linear-gradient(135deg,#FF1A6C,#FF4D8F);color:#fff;
+      font-family:'Fredoka One',cursive;font-size:1.1rem;
+      box-shadow:0 4px 20px rgba(255,26,108,0.4);
+    ">🔓 Enter Dashboard</button>
+  </div>
+</div>
+
+<script>
+  // ── Change this password to whatever you want ──
+  var ADMIN_PASSWORD = 'candy123';
+
+  // Check if already logged in this session
+  if (sessionStorage.getItem('cv_admin') === 'yes') {
+    document.getElementById('pwd-gate').style.display = 'none';
+  }
+
+  function checkPwd() {
+    var val = document.getElementById('pwd-input').value;
+    if (val === ADMIN_PASSWORD) {
+      sessionStorage.setItem('cv_admin', 'yes');
+      document.getElementById('pwd-gate').style.display = 'none';
+    } else {
+      document.getElementById('pwd-error').style.display = 'block';
+      document.getElementById('pwd-input').value = '';
+      document.getElementById('pwd-input').focus();
+    }
+  }
+</script>
+
+<!-- Admin Header -->
+<div class="admin-header">
+  <a href="index.html" style="font-family:'Fredoka One',cursive;font-size:1.5rem;background:linear-gradient(90deg,#FF1A6C,#FF6B00,#00B4FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;">
+    🍭 CandyVerse
+  </a>
+  <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+    <span class="admin-badge">👑 Admin</span>
+    <a href="order-track.html" class="btn btn-secondary btn-sm">🚚 Tracker</a>
+    <a href="products.html"   class="btn btn-primary   btn-sm">🛍 Store</a>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>👑 Admin Dashboard</h1>
+  <p>Manage orders · Update status · Export data</p>
+</div>
+
+<div class="orders-container">
+
+  <!-- Stats -->
+  <div class="admin-stats" id="admin-stats"></div>
+
+  <!-- ── Google Sheets Live Sync Panel ── -->
+  <div class="sheets-panel">
+    <h3>📊 Google Sheets — Live Sync</h3>
+    <div class="steps-guide">
+      <b>Setup in 3 steps:</b><br>
+      1️⃣ Open <a href="https://sheets.google.com" target="_blank">Google Sheets</a> → create a new sheet → name it <b>CandyVerse Orders</b><br>
+      2️⃣ Click <b>Extensions → Apps Script</b> → paste the script from <b>README.md</b> → click Deploy → Web App → copy the URL<br>
+      3️⃣ Paste the URL below and click <b>Save</b> — every order update will auto-sync!
+    </div>
+    <div class="webhook-row">
+      <input type="url" id="webhook-url" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"/>
+      <button onclick="saveWebhookUrl()" class="btn btn-secondary btn-sm">💾 Save</button>
+      <button onclick="testWebhook()"    class="btn btn-sm" style="background:rgba(0,200,83,0.1);color:#00875a;border:1.5px solid rgba(0,200,83,0.35)">🧪 Test</button>
+      <button onclick="syncAllToSheets()" class="btn btn-sm" style="background:rgba(255,214,0,0.12);color:#b34700;border:1.5px solid rgba(255,214,0,0.4)">🔄 Sync All</button>
+      <span id="webhook-status">Not connected</span>
+    </div>
+  </div>
+
+  <!-- Auto-sync countdown badge -->
+  <div id="auto-sync-badge" style="
+    display:inline-flex;align-items:center;gap:0.5rem;
+    padding:0.45rem 1.1rem;border-radius:99px;
+    border:1.5px solid rgba(0,180,255,0.35);
+    font-weight:800;font-size:0.88rem;
+    font-family:'Nunito',sans-serif;
+    margin-bottom:1rem;
+    transition:all 0.4s ease;
+  ">🔄 Auto-syncing to Sheets in <b>10s</b></div>
+
+  <!-- Filter + Action Bar -->
+  <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1.5rem;">
+    <input type="text" id="admin-search" placeholder="🔍 Search by ID, name, phone, item..."/>
+    <select id="admin-status-filter">
+      <option value="all">All Payments</option>
+      <option value="Paid">✅ Paid</option>
+      <option value="Pending">🕐 Pending</option>
+    </select>
+    <button onclick="exportExcel()"    class="btn btn-success btn-sm">📊 Export Excel</button>
+    <button onclick="syncAllToSheets()" class="btn btn-sm" style="background:rgba(0,180,255,0.1);color:#0055aa;border:1.5px solid rgba(0,180,255,0.3)">☁️ Sync Sheets</button>
+    <button onclick="clearAllOrders()" class="btn btn-danger btn-sm">🗑 Clear All</button>
+  </div>
+
+  <!-- Orders List -->
+  <div id="admin-orders-list"></div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-icon">💫</span>
+  <span class="toast-msg" id="toast-msg"></span>
+</div>
+
+<script src="admin-orders.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CandyVerse 🍭 All Snacks</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">🍭 CandyVerse</a>
+  <ul class="navbar-links">
+    <li><a href="products.html" class="active">🛍 Shop</a></li>
+    <li><a href="cart.html" class="cart-badge">🛒 Cart <span class="badge" id="cart-count">0</span></a></li>
+    <li><a href="orders.html">📦 Orders</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🍭 Sweet Snack Universe</h1>
+  <p>Dive into the most sugary galaxy ever created</p>
+</div>
+
+<!-- Controls -->
+<div class="products-controls">
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Search for something sweet..." />
+  </div>
+  <div class="category-filters" id="category-filters">
+    <button class="filter-btn active" data-cat="all">✨ All</button>
+    <button class="filter-btn" data-cat="chocolate">🍫 Chocolate</button>
+    <button class="filter-btn" data-cat="gummies">🐻 Gummies</button>
+    <button class="filter-btn" data-cat="fruity">🍓 Fruity</button>
+    <button class="filter-btn" data-cat="hard">🍬 Hard Candy</button>
+    <button class="filter-btn" data-cat="special">⭐ Special</button>
+  </div>
+</div>
+
+<!-- Grid -->
+<div class="products-grid" id="products-grid">
+  <!-- Injected by products.js -->
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-icon">🛒</span>
+  <span class="toast-msg" id="toast-msg"></span>
+</div>
+
+<!-- Floating background candies -->
+<div id="bg-candies"></div>
+
+<script src="products.js"></script>
+</body>
+</html>

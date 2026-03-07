@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CandyVerse 🎉 Order Placed!</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    @keyframes confettiRain {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity:1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity:0; }
+    }
+    .confetti-piece {
+      position: fixed;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 999;
+      animation: confettiRain linear forwards;
+    }
+  </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- CandyVerse DB layer -->
+  <script src="cv-db.js"></script>
+  <script>cvInitFirebase();</script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">🍭 CandyVerse</a>
+  <ul class="navbar-links">
+    <li><a href="products.html">🛍 Shop More</a></li>
+    <li><a href="orders.html">📦 My Orders</a></li>
+  </ul>
+</nav>
+
+<div class="success-container" style="padding-top:3rem;">
+  <span class="success-icon" id="success-icon">🎉</span>
+  <h1 class="success-title">Order Placed!</h1>
+  <p style="color:var(--text-muted);font-size:1.1rem;font-weight:600;margin-bottom:0.5rem;">
+    Your candy is on its way, sweetheart! 🚀
+  </p>
+  <div class="confetti-strip">🍭 🍬 🌟 💖 🍫 🧁 🎊</div>
+
+  <!-- Order ID -->
+  <div id="order-id-badge" style="display:inline-block;background:rgba(107,207,255,0.1);border:1px solid rgba(107,207,255,0.3);border-radius:99px;padding:0.5rem 1.5rem;font-family:'Fredoka One',cursive;color:var(--blue);margin:0.5rem 0 1.5rem;font-size:1rem;"></div>
+
+  <!-- Items -->
+  <div class="order-items-list" id="order-items-list">
+    <!-- Injected by JS -->
+  </div>
+
+  <!-- Delivery Info -->
+  <div id="delivery-info" style="text-align:left;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius);padding:1.2rem;margin-bottom:1.5rem;"></div>
+
+  <!-- Actions -->
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:1.5rem;">
+    <a href="products.html" class="btn btn-primary btn-lg">🛍 Shop More Candy</a>
+    <a href="orders.html" class="btn btn-secondary">📦 View All Orders</a>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── Load last order ────────────────────────────────
+  const order = JSON.parse(localStorage.getItem('cv_last_order') || 'null');
+
+  if (!order) {
+    document.getElementById('success-icon').textContent = '😔';
+    document.querySelector('.success-title').textContent = 'No Order Found';
+    document.getElementById('order-items-list').innerHTML = '<p style="text-align:center;color:var(--text-muted)">No recent order data.</p>';
+    return;
+  }
+
+  // Order ID
+  document.getElementById('order-id-badge').textContent = `Order ID: ${order.id}`;
+
+  // Items list
+  const listEl = document.getElementById('order-items-list');
+  const rows = order.items.map(i => `
+    <div class="order-item-row">
+      <span>${i.emoji || '🍭'} ${i.name} × ${i.qty}</span>
+      <span>₹${(i.price * i.qty).toLocaleString('en-IN')}</span>
+    </div>`).join('');
+
+  const deliveryRow = order.delivery > 0
+    ? `<div class="order-item-row" style="color:var(--text-muted)"><span>🚚 Delivery</span><span>₹${order.delivery}</span></div>`
+    : `<div class="order-item-row" style="color:#00e676"><span>🚚 Delivery</span><span>FREE</span></div>`;
+
+  listEl.innerHTML = rows + deliveryRow +
+    `<div class="order-total-row"><span>${order.paymentStatus === "Pending" ? "💵 Total (Pay on Delivery)" : "💰 Total Paid"}</span><span>₹${order.total.toLocaleString('en-IN')}</span></div>`;
+
+  // Delivery info
+  const di = document.getElementById('delivery-info');
+  di.innerHTML = `
+    <div style="font-family:'Fredoka One',cursive;color:var(--pink);margin-bottom:0.75rem;">📍 Delivering To</div>
+    <div style="font-weight:700;margin-bottom:0.25rem;">👤 ${order.customer.name}</div>
+    <div style="color:var(--text-muted);font-size:0.9rem;font-weight:600;">📱 ${order.customer.phone}</div>
+    <div style="color:var(--text-muted);font-size:0.9rem;margin-top:0.5rem;line-height:1.5;">${order.customer.address}</div>
+    <div style="margin-top:0.75rem;display:inline-flex;align-items:center;gap:0.5rem;background:${order.paymentStatus==='Pending'?'rgba(255,143,0,0.12)':'rgba(0,200,83,0.12)'};border:1.5px solid ${order.paymentStatus==='Pending'?'rgba(255,143,0,0.5)':'rgba(0,200,83,0.4)'};border-radius:99px;padding:0.3rem 1rem;font-size:0.9rem;font-weight:800;color:${order.paymentStatus==='Pending'?'#b34700':'#00875a'};">
+      ${order.paymentStatus==='Pending'?'🚚 Pay on Delivery':'✅ Payment Received'}
+    </div>`;
+
+  // Confetti!
+  const colors = ['#FF6B9D','#FFE66D','#6BCFFF','#B06BFF','#6BFFB8','#FF3D7F'];
+  for (let i = 0; i < 80; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.top = '-10px';
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      el.style.width = el.style.height = (6 + Math.random() * 10) + 'px';
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.animationDuration = (2 + Math.random() * 3) + 's';
+      el.style.animationDelay = (Math.random() * 0.5) + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 6000);
+    }, i * 50);
+  }
+})();
+</script>
+</body>
+</html>

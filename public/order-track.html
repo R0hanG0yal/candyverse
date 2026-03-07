@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CandyVerse 🚚 Track Your Order</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* ── Tracker page specific ── */
+    .tracker-wrap {
+      max-width: 700px; margin: 0 auto; padding: 0 1.5rem 5rem;
+      position: relative; z-index: 1;
+    }
+
+    /* Order info card */
+    .order-info-card {
+      background: rgba(255,255,255,0.6);
+      border: 2px solid rgba(255,77,143,0.25);
+      border-radius: 20px; padding: 1.5rem 2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 30px rgba(255,77,143,0.15);
+      margin-bottom: 2rem;
+    }
+    .order-info-card h3 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.3rem; color: var(--text); margin-bottom: 0.75rem;
+    }
+    .order-meta { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .order-meta-item {
+      background: rgba(255,77,143,0.08);
+      border: 1.5px solid rgba(255,77,143,0.2);
+      border-radius: 12px; padding: 0.5rem 1rem;
+      font-size: 0.88rem; font-weight: 700; color: var(--text-muted);
+    }
+
+    /* Stepper */
+    .stepper {
+      background: rgba(255,255,255,0.62);
+      border: 2px solid rgba(255,77,143,0.2);
+      border-radius: 24px; padding: 2.5rem 2rem;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 12px 40px rgba(255,77,143,0.18);
+      margin-bottom: 2rem;
+      position: relative;
+    }
+    .stepper-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.5rem; color: var(--text);
+      margin-bottom: 2rem; text-align: center;
+    }
+
+    /* Vertical step list */
+    .steps { position: relative; padding-left: 0; list-style: none; }
+
+    /* Connecting line */
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 24px; top: 28px;
+      width: 4px;
+      height: calc(100% - 56px);
+      background: rgba(255,77,143,0.15);
+      border-radius: 4px;
+    }
+
+    /* Active fill line — animated width via JS */
+    .steps-progress-line {
+      position: absolute;
+      left: 24px; top: 28px;
+      width: 4px;
+      background: linear-gradient(180deg, #FF1A6C, #FF80AB, #FF4D8F);
+      border-radius: 4px;
+      transition: height 1.2s cubic-bezier(0.34,1.56,0.64,1);
+      height: 0;
+    }
+
+    .step-item {
+      display: flex; align-items: flex-start;
+      gap: 1.2rem; margin-bottom: 2rem; position: relative;
+    }
+    .step-item:last-child { margin-bottom: 0; }
+
+    /* Circle icon */
+    .step-icon {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+      border: 3px solid rgba(255,77,143,0.2);
+      background: rgba(255,255,255,0.7);
+      transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1);
+      position: relative; z-index: 1;
+    }
+    .step-item.done .step-icon {
+      background: linear-gradient(135deg, #FF1A6C, #FF4D8F);
+      border-color: #FF1A6C;
+      box-shadow: 0 4px 20px rgba(255,26,108,0.5);
+      transform: scale(1.1);
+    }
+    .step-item.active .step-icon {
+      background: linear-gradient(135deg, #FF80AB, #FF4D8F);
+      border-color: #FF4D8F;
+      box-shadow: 0 0 0 6px rgba(255,77,143,0.2), 0 4px 20px rgba(255,77,143,0.4);
+      animation: stepPulse 1.8s ease-in-out infinite;
+    }
+    @keyframes stepPulse {
+      0%,100% { box-shadow: 0 0 0 6px rgba(255,77,143,0.2), 0 4px 20px rgba(255,77,143,0.4); }
+      50%      { box-shadow: 0 0 0 12px rgba(255,77,143,0.08), 0 4px 28px rgba(255,77,143,0.6); }
+    }
+    .step-item.pending .step-icon {
+      opacity: 0.4;
+    }
+
+    /* Step text */
+    .step-body { flex: 1; padding-top: 0.6rem; }
+    .step-label {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.05rem;
+      transition: color 0.4s;
+    }
+    .step-item.done   .step-label { color: #FF1A6C; }
+    .step-item.active .step-label { color: #FF4D8F; }
+    .step-item.pending .step-label { color: rgba(61,0,64,0.35); }
+
+    .step-desc {
+      font-size: 0.82rem; font-weight: 600;
+      color: var(--text-muted); margin-top: 0.2rem;
+      transition: opacity 0.4s;
+    }
+    .step-item.pending .step-desc { opacity: 0.35; }
+
+    .step-time {
+      font-size: 0.75rem; font-weight: 700;
+      color: #00875a; margin-top: 0.25rem;
+      background: rgba(0,200,83,0.1);
+      display: inline-block; padding: 0.15rem 0.6rem;
+      border-radius: 99px; border: 1px solid rgba(0,200,83,0.3);
+    }
+    .step-item.active .step-time {
+      color: #c2006e; background: rgba(255,26,108,0.08);
+      border-color: rgba(255,26,108,0.25);
+      animation: timeBlink 1.5s ease-in-out infinite;
+    }
+    @keyframes timeBlink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    /* ETA banner */
+    .eta-banner {
+      background: linear-gradient(135deg, rgba(255,77,143,0.12), rgba(0,180,255,0.10));
+      border: 2px solid rgba(255,77,143,0.3);
+      border-radius: 16px; padding: 1.2rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .eta-icon { font-size: 2rem; }
+    .eta-text { flex: 1; }
+    .eta-label { font-family: 'Fredoka One', cursive; font-size: 1.1rem; color: var(--text); }
+    .eta-val   { font-size: 0.9rem; color: var(--text-muted); font-weight: 700; margin-top: 0.2rem; }
+
+    /* Items summary */
+    .items-card {
+      background: rgba(255,255,255,0.55);
+      border: 2px solid rgba(255,77,143,0.18);
+      border-radius: 16px; padding: 1.5rem;
+      backdrop-filter: blur(12px);
+    }
+    .items-card h4 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.1rem; color: var(--text); margin-bottom: 1rem;
+    }
+    .item-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0; border-bottom: 1px solid rgba(255,77,143,0.1);
+      font-weight: 700; color: var(--text); font-size: 0.92rem;
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-total-row {
+      display: flex; justify-content: space-between;
+      font-family: 'Fredoka One', cursive; font-size: 1.2rem;
+      padding-top: 0.75rem; margin-top: 0.25rem;
+      background: linear-gradient(90deg,#b34700,#ff6b00);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* Auto refresh badge */
+    .refresh-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(0,180,255,0.1); border: 1.5px solid rgba(0,180,255,0.3);
+      border-radius: 99px; padding: 0.3rem 1rem;
+      font-size: 0.8rem; font-weight: 800; color: #0055aa;
+      margin-bottom: 1.5rem;
+    }
+    .refresh-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #00B4FF; animation: refreshBlink 1.4s ease-in-out infinite;
+    }
+    @keyframes refreshBlink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.7)} }
+
+    /* Delivered state */
+    .delivered-banner {
+      background: linear-gradient(135deg, rgba(0,200,83,0.12), rgba(0,135,90,0.08));
+      border: 2px solid rgba(0,200,83,0.35);
+      border-radius: 16px; padding: 1.5rem;
+      text-align: center; margin-bottom: 1.5rem;
+      animation: deliveredIn 0.8s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes deliveredIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
+    .delivered-banner h3 {
+      font-family: 'Fredoka One', cursive; font-size: 1.8rem;
+      color: #00875a; margin-bottom: 0.5rem;
+    }
+
+    /* Check mark for done steps */
+    .step-item.done .step-icon::after {
+      content: '✓';
+      position: absolute;
+      bottom: -4px; right: -4px;
+      width: 18px; height: 18px;
+      background: #fff; border-radius: 50%;
+      font-size: 0.65rem; font-weight: 900;
+      color: #FF1A6C; display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid #FF1A6C;
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- CandyVerse DB layer -->
+  <script src="cv-db.js"></script>
+  <script>cvInitFirebase();</script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">🍭 CandyVerse</a>
+  <ul class="navbar-links">
+    <li><a href="products.html">🛍 Shop</a></li>
+    <li><a href="cart.html" class="cart-badge">🛒 Cart <span class="badge" id="cart-count">0</span></a></li>
+    <li><a href="orders.html" class="active">📦 Orders</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🚚 Track Your Order</h1>
+  <p id="track-subtitle">Live order status updates</p>
+</div>
+
+<div class="tracker-wrap" id="tracker-wrap">
+  <!-- Injected by JS -->
+</div>
+
+<script>
+(function() {
+  // Cart badge
+  var cart = JSON.parse(localStorage.getItem('cv_cart') || '[]');
+  var badge = document.getElementById('cart-count');
+  if (badge) badge.textContent = cart.reduce(function(s,i){return s+i.qty},0);
+
+  var STEPS = [
+    { key: 'Order Placed',      icon: '📋', desc: 'We received your order and are confirming it' },
+    { key: 'Preparing',         icon: '👨‍🍳', desc: 'Our candy experts are handpicking your treats' },
+    { key: 'Packed',            icon: '📦', desc: 'Your order is packed with love and care' },
+    { key: 'Shipped',           icon: '🚚', desc: 'On its way to your city' },
+    { key: 'Out for Delivery',  icon: '🛵', desc: 'Your candy is just around the corner!' },
+    { key: 'Delivered',         icon: '🎉', desc: 'Enjoy your sweet treats!' },
+  ];
+
+  // Read order ID from URL: order-track.html?id=CV1234
+  var params = new URLSearchParams(window.location.search);
+  var orderId = params.get('id');
+  var wrap = document.getElementById('tracker-wrap');
+
+  function stepIndex(status) {
+    return STEPS.findIndex(function(s){ return s.key === status; });
+  }
+
+  function render() {
+    cvGetOrder(orderId, function(order) {
+    if (!order) {
+      document.getElementById('track-subtitle').textContent = 'Order not found';
+      wrap.innerHTML = '<div style="text-align:center;padding:4rem"><div style="font-size:4rem">❓</div><p style="font-family:\'Fredoka One\',cursive;font-size:1.5rem;color:var(--text-muted);margin-top:1rem">Order not found</p><a href="orders.html" class="btn btn-primary" style="margin-top:1rem">← My Orders</a></div>';
+      return;
+    }
+
+    var status    = order.orderStatus || 'Order Placed';
+    var curIdx    = stepIndex(status);
+    var delivered = status === 'Delivered';
+    var pct       = curIdx / (STEPS.length - 1);
+
+    document.getElementById('track-subtitle').textContent = 'Order #' + order.id;
+
+    // ETA text
+    var etaTexts = [
+      'Estimated delivery in 2–3 days',
+      'Estimated delivery in 2–3 days',
+      'Estimated delivery in 1–2 days',
+      'Estimated delivery in 1 day',
+      'Arriving today! 🎊',
+      'Your order has been delivered! 🎉'
+    ];
+    var etaIcons = ['⏳','👨‍🍳','📦','🚀','🛵','✅'];
+
+    var html = '';
+
+    // Auto-refresh badge (not shown if delivered)
+    if (!delivered) {
+      html += '<div class="refresh-badge"><div class="refresh-dot"></div> Auto-refreshing every 30 seconds</div>';
+    }
+
+    // Delivered banner
+    if (delivered) {
+      html += '<div class="delivered-banner"><div style="font-size:3.5rem;margin-bottom:0.5rem">🎉</div><h3>Order Delivered!</h3><p style="color:#00875a;font-weight:700">Thank you for shopping with CandyVerse! Enjoy your treats! 🍭</p></div>';
+    }
+
+    // ETA banner
+    html += '<div class="eta-banner">';
+    html += '<div class="eta-icon">' + etaIcons[curIdx] + '</div>';
+    html += '<div class="eta-text"><div class="eta-label">' + status + '</div>';
+    html += '<div class="eta-val">' + etaTexts[curIdx] + '</div></div>';
+    html += '</div>';
+
+    // Order info
+    html += '<div class="order-info-card">';
+    html += '<h3>📋 Order Details</h3>';
+    html += '<div class="order-meta">';
+    html += '<div class="order-meta-item">🛒 ' + order.id + '</div>';
+    html += '<div class="order-meta-item">📅 ' + order.date + '</div>';
+    html += '<div class="order-meta-item">💳 ' + (order.customer.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Paid') + '</div>';
+    var pstat = order.paymentStatus === 'Paid'
+      ? '<span style="color:#00875a">✅ Paid</span>'
+      : '<span style="color:#b34700">🕐 Pay on Delivery</span>';
+    html += '<div class="order-meta-item">💰 ' + pstat + '</div>';
+    html += '</div></div>';
+
+    // Stepper
+    html += '<div class="stepper">';
+    html += '<div class="stepper-title">📍 Order Journey</div>';
+    html += '<ul class="steps" id="steps-list">';
+    html += '<div class="steps-progress-line" id="progress-line"></div>';
+
+    STEPS.forEach(function(step, idx) {
+      var state = idx < curIdx ? 'done' : (idx === curIdx ? 'active' : 'pending');
+      var timeStr = '';
+      if (order.statusTimestamps && order.statusTimestamps[step.key]) {
+        timeStr = '<div class="step-time">' + new Date(order.statusTimestamps[step.key]).toLocaleString('en-IN', {dateStyle:'short',timeStyle:'short'}) + '</div>';
+      } else if (idx === 0) {
+        timeStr = '<div class="step-time">' + order.date + '</div>';
+      } else if (state === 'active') {
+        timeStr = '<div class="step-time">● In progress</div>';
+      }
+
+      html += '<li class="step-item ' + state + '">';
+      html += '<div class="step-icon">' + step.icon + '</div>';
+      html += '<div class="step-body">';
+      html += '<div class="step-label">' + step.key + '</div>';
+      html += '<div class="step-desc">' + step.desc + '</div>';
+      html += timeStr;
+      html += '</div></li>';
+    });
+
+    html += '</ul></div>'; // end steps + stepper
+
+    // Items summary
+    html += '<div class="items-card">';
+    html += '<h4>🛍 Your Items</h4>';
+    order.items.forEach(function(item) {
+      html += '<div class="item-row"><span>' + (item.emoji||'🍭') + ' ' + item.name + ' × ' + item.qty + '</span><span>₹' + (item.price*item.qty).toLocaleString('en-IN') + '</span></div>';
+    });
+    if (order.delivery > 0) {
+      html += '<div class="item-row"><span>🚚 Delivery</span><span>₹' + order.delivery + '</span></div>';
+    } else {
+      html += '<div class="item-row"><span>🚚 Delivery</span><span style="color:#00875a">FREE</span></div>';
+    }
+    html += '<div class="item-total-row"><span>💰 Total</span><span>₹' + order.total.toLocaleString('en-IN') + '</span></div>';
+    html += '</div>'; // end items card
+
+    // Address
+    html += '<div class="order-info-card" style="margin-top:1.5rem">';
+    html += '<h3>📍 Delivering To</h3>';
+    html += '<div style="font-weight:700;margin-bottom:0.25rem">👤 ' + order.customer.name + ' · 📱 ' + order.customer.phone + '</div>';
+    html += '<div style="color:var(--text-muted);font-size:0.9rem;font-weight:600;line-height:1.6">' + order.customer.address + '</div>';
+    html += '</div>';
+
+    html += '<div style="text-align:center;margin-top:2rem"><a href="orders.html" class="btn btn-secondary">← All Orders</a>&nbsp;<a href="products.html" class="btn btn-primary">🛍 Shop More</a></div>';
+
+    wrap.innerHTML = html;
+
+    // Animate progress line height after render
+    setTimeout(function() {
+      var line = document.getElementById('progress-line');
+      if (line && curIdx > 0) {
+        var stepHeight = 80;
+        line.style.height = Math.min(curIdx * stepHeight, (STEPS.length-1) * stepHeight) + 'px';
+      }
+    }, 100);
+    }); // end cvGetOrder
+  }
+
+  if (!orderId) {
+    // If no ID, show the last order
+    cvGetOrders(function(orders) {
+      if (orders && orders.length) {
+        orderId = orders[0].id;
+        window.history.replaceState({}, '', 'order-track.html?id=' + orderId);
+        render();
+      }
+    });
+    return;
+  }
+
+  render();
+
+  // Auto-refresh every 30 seconds
+  setInterval(function() {
+    render();
+  }, 30000);
+
+})();
+</script>
+</body>
+</html>

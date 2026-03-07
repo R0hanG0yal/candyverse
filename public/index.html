@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CandyVerse 🍭 Enter the Sweet Universe</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap');
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    /* ── Body: soft pink gradient — no dark colour anywhere ── */
+    body {
+      background: linear-gradient(160deg,
+        #FFE0EE 0%, #FFB3D9 20%, #FF80AB 40%,
+        #B3E5FC 60%, #80D8FF 78%, #FFB3D9 90%, #FF80AB 100%);
+      background-attachment: fixed;
+      overflow: hidden;
+      font-family: 'Nunito', sans-serif;
+      cursor: none;
+    }
+
+    /* ── Custom cursor — pink glow ── */
+    #cursor {
+      position: fixed; width: 20px; height: 20px;
+      background: radial-gradient(circle, #FF80AB 0%, #FF1A6C 100%);
+      border-radius: 50%;
+      pointer-events: none; z-index: 9999;
+      transform: translate(-50%,-50%);
+      box-shadow: 0 0 12px rgba(255,26,108,0.8), 0 0 28px rgba(255,26,108,0.4);
+      transition: width .15s, height .15s;
+      mix-blend-mode: multiply;
+    }
+    #cursor-trail {
+      position: fixed; width: 38px; height: 38px;
+      border: 2px solid rgba(0,180,255,0.65);
+      border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: left .1s ease, top .1s ease;
+    }
+
+    /* ── Canvas fills entire viewport ── */
+    #candy-canvas {
+      display: block; position: fixed; inset: 0; z-index: 1;
+    }
+
+    /* ── DOM sparkle dots ── */
+    #sparkles { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+
+    .sparkle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    @keyframes sparkleTwinkle {
+      0%,100% { opacity:0; transform:scale(0) rotate(0deg); }
+      40%      { opacity:1; transform:scale(1.4) rotate(180deg); }
+      60%      { opacity:1; transform:scale(1) rotate(270deg); }
+    }
+
+    /* Floating cursor trail particles */
+    @keyframes floatUp {
+      0%   { opacity:0; transform:translateY(0) scale(0) rotate(0deg); }
+      15%  { opacity:0.9; transform:translateY(-20px) scale(1) rotate(20deg); }
+      85%  { opacity:0.7; }
+      100% { opacity:0; transform:translateY(-110px) scale(0.5) rotate(360deg); }
+    }
+    .float-particle { pointer-events:none; }
+
+    /* ── UI overlay ── */
+    #overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding-bottom: 7vh;
+      pointer-events: none;
+    }
+
+    /* Brand title */
+    #brand-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(3rem, 10vw, 7rem);
+      background: linear-gradient(135deg, #FF1A6C 0%, #FF6B00 30%, #FF80AB 55%, #00B4FF 80%, #FF4D8F 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+      letter-spacing: 2px;
+      /* Strong visible drop shadow so title pops over the bright scene */
+      filter: drop-shadow(0 3px 16px rgba(255,26,108,0.55)) drop-shadow(0 0 40px rgba(255,107,0,0.3));
+      animation: titleFloat 4s ease-in-out infinite, titleIn 1.4s ease forwards;
+      opacity: 0;
+    }
+    @keyframes titleIn {
+      from { opacity:0; transform:translateY(30px) scale(.9); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+    @keyframes titleFloat {
+      0%,100% { filter:drop-shadow(0 3px 14px rgba(255,26,108,.5)); }
+      50%      { filter:drop-shadow(0 3px 40px rgba(255,26,108,.9)) drop-shadow(0 0 60px rgba(255,107,0,.5)); }
+    }
+
+    /* Tagline */
+    #tagline {
+      font-family: 'Nunito', sans-serif; font-weight: 900;
+      font-size: clamp(.85rem, 2.2vw, 1.2rem);
+      color: #a00050;
+      text-align: center; letter-spacing: 3px; text-transform: uppercase;
+      margin-bottom: 3rem;
+      text-shadow: 0 2px 6px rgba(255,255,255,0.9), 0 0 20px rgba(255,26,108,0.4); font-weight: 900; letter-spacing: 4px;
+      animation: taglineIn 1.6s ease .5s forwards; opacity: 0;
+    }
+    @keyframes taglineIn {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* Enter button */
+    #enter-btn {
+      pointer-events: all;
+      display: inline-flex; align-items: center; gap: .8rem;
+      padding: 1.05rem 3rem;
+      background: linear-gradient(135deg, #FF1A6C, #FF6B00, #FF80AB);
+      background-size: 200% 200%;
+      animation: btnGrad 3s ease infinite, btnIn 2s ease 1s forwards;
+      opacity: 0;
+      border: none; border-radius: 99px;
+      font-family: 'Fredoka One', cursive; font-size: 1.5rem;
+      color: #fff;
+      cursor: none;
+      text-decoration: none;
+      letter-spacing: 1px;
+      position: relative; overflow: hidden;
+      box-shadow:
+        0 6px 30px rgba(255,26,108,.65),
+        0 2px 12px rgba(255,107,0,.4),
+        0 0 0 4px rgba(255,255,255,.4);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s;
+    }
+    /* White shimmer layer */
+    #enter-btn::before {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.3) 50%, transparent 70%);
+      background-size:200% 100%;
+      animation:shimmer 2.5s linear infinite;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    @keyframes btnGrad { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    @keyframes btnIn {
+      from { opacity:0; transform:translateY(20px) scale(.9); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+    #enter-btn:hover {
+      transform: translateY(-6px) scale(1.06);
+      box-shadow: 0 12px 50px rgba(255,26,108,.85), 0 4px 20px rgba(255,107,0,.5), 0 0 0 5px rgba(255,255,255,.5);
+    }
+
+    /* ── Loading screen — fully light ── */
+    #loading {
+      position: fixed; inset: 0; z-index: 100;
+      background: linear-gradient(135deg, #FFE0EE 0%, #FFB3D9 40%, #B3E5FC 70%, #80D8FF 100%);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1rem;
+      transition: opacity .8s ease;
+    }
+    #loading h2 {
+      font-family: 'Fredoka One', cursive; font-size: 2.2rem;
+      background: linear-gradient(90deg, #FF1A6C, #FF6B00, #00B4FF);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      animation: loadPulse 1.1s ease-in-out infinite;
+    }
+    @keyframes loadPulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
+    .load-dots { display:flex; gap:.55rem; }
+    .load-dot { width:14px; height:14px; border-radius:50%; animation:dotBounce 1.2s ease-in-out infinite; }
+    .load-dot:nth-child(1){background:#FF4D8F; animation-delay:0s;}
+    .load-dot:nth-child(2){background:#FFD600; animation-delay:.2s;}
+    .load-dot:nth-child(3){background:#00B4FF; animation-delay:.4s;}
+    @keyframes dotBounce { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-16px) scale(1.3);} }
+    #loading.fade-out { opacity:0; pointer-events:none; }
+  </style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading">
+  <h2>🍭 Loading CandyVerse...</h2>
+  <div class="load-dots">
+    <div class="load-dot"></div>
+    <div class="load-dot"></div>
+    <div class="load-dot"></div>
+  </div>
+</div>
+
+<!-- Custom Cursor -->
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+
+<!-- Three.js Canvas -->
+<canvas id="candy-canvas"></canvas>
+
+<!-- DOM Sparkles -->
+<div id="sparkles"></div>
+
+<!-- UI Overlay -->
+<div id="overlay">
+  <h1 id="brand-title">🍭 CandyVerse</h1>
+  <p id="tagline">✦ Where Every Bite is Magic ✦</p>
+  <a id="enter-btn" href="products.html">
+    🚀 Enter the CandyVerse
+  </a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

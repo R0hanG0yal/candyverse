@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CandyVerse 📦 My Orders</title>
+  <link rel="stylesheet" href="style.css"/>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="cv-db.js"></script>
+  <style>
+    @keyframes cardIn   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes floatBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-15px)} }
+    @keyframes miniPulse{ 0%,100%{box-shadow:0 0 0 4px rgba(255,77,143,0.2)} 50%{box-shadow:0 0 0 9px rgba(255,77,143,0.05)} }
+    @keyframes trackGrad{ 0%{background-position:0%} 50%{background-position:100%} 100%{background-position:0%} }
+
+    .mini-stepper { display:flex;align-items:flex-start;margin:1rem 0 .25rem;overflow-x:auto;padding-bottom:4px; }
+    .mini-step    { display:flex;flex-direction:column;align-items:center;flex:1;min-width:48px;position:relative; }
+    .mini-step:not(:last-child)::after { content:'';position:absolute;top:13px;left:50%;width:100%;height:3px;background:rgba(255,77,143,0.15);z-index:0; }
+    .mini-step.s-done:not(:last-child)::after   { background:linear-gradient(90deg,#FF1A6C,#FF80AB); }
+    .mini-step.s-active:not(:last-child)::after { background:linear-gradient(90deg,#FF80AB,rgba(255,77,143,0.15)); }
+    .mini-dot { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;border:2px solid rgba(255,77,143,0.2);background:rgba(255,255,255,0.65);position:relative;z-index:1;flex-shrink:0; }
+    .mini-step.s-done   .mini-dot { background:linear-gradient(135deg,#FF1A6C,#FF4D8F);border-color:#FF1A6C;box-shadow:0 2px 10px rgba(255,26,108,0.45); }
+    .mini-step.s-active .mini-dot { background:linear-gradient(135deg,#FF80AB,#FF4D8F);border-color:#FF4D8F;animation:miniPulse 1.8s ease-in-out infinite; }
+    .mini-step.s-pending .mini-dot { opacity:.32; }
+    .mini-label { font-size:.56rem;font-weight:800;text-align:center;margin-top:4px;line-height:1.2;max-width:48px; }
+    .mini-step.s-done   .mini-label { color:#FF1A6C; }
+    .mini-step.s-active .mini-label { color:#FF4D8F;font-weight:900; }
+    .mini-step.s-pending .mini-label { color:rgba(61,0,64,0.28); }
+
+    .track-btn { display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;padding:.9rem;margin-top:.9rem;background:linear-gradient(135deg,#FF1A6C 0%,#FF4D8F 50%,#FF80AB 100%);background-size:200% auto;animation:trackGrad 3s ease infinite;color:#fff;border:none;border-radius:14px;font-family:'Fredoka One',cursive;font-size:1.05rem;text-decoration:none;cursor:pointer;box-shadow:0 4px 20px rgba(255,26,108,0.4);transition:transform .25s,box-shadow .25s; }
+    .track-btn:hover { transform:translateY(-3px) scale(1.02);box-shadow:0 8px 30px rgba(255,26,108,0.6); }
+    .track-btn.delivered { background:linear-gradient(135deg,#00c853,#00875a);animation:none;box-shadow:0 4px 20px rgba(0,200,83,0.4); }
+
+    .status-chip { display:inline-flex;align-items:center;gap:.4rem;border-radius:99px;padding:.35rem 1rem;font-weight:800;font-size:.85rem;border:2px solid;margin:.6rem 0 0; }
+    .order-details { display:none;margin-top:.75rem; }
+    .order-details.open { display:block; }
+    .toggle-btn { background:none;border:none;cursor:pointer;color:var(--text-muted);font-weight:800;font-size:.83rem;font-family:'Nunito',sans-serif;padding:0;display:flex;align-items:center;gap:.3rem;margin-top:.6rem; }
+    .toggle-btn:hover { color:var(--hot-pink); }
+
+    /* Phone login gate */
+    .phone-gate { background:rgba(255,255,255,0.7);border:2px solid rgba(255,77,143,0.25);border-radius:20px;padding:2.5rem 2rem;max-width:420px;margin:2rem auto;text-align:center;backdrop-filter:blur(16px);box-shadow:0 12px 40px rgba(255,26,108,0.15); }
+    .phone-gate h3 { font-family:'Fredoka One',cursive;font-size:1.6rem;color:var(--text);margin-bottom:.5rem; }
+    .phone-gate input { width:100%;box-sizing:border-box;padding:.8rem 1.2rem;border-radius:99px;border:2px solid rgba(255,77,143,0.35);font-family:'Nunito',sans-serif;font-size:1rem;font-weight:700;color:var(--text);outline:none;margin:.75rem 0;background:rgba(255,255,255,0.9); }
+    .phone-gate input:focus { border-color:#FF1A6C;box-shadow:0 0 16px rgba(255,26,108,0.2); }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">🍭 CandyVerse</a>
+  <ul class="navbar-links">
+    <li><a href="products.html">🛍 Shop</a></li>
+    <li><a href="cart.html" class="cart-badge">🛒 Cart <span class="badge" id="cart-count">0</span></a></li>
+    <li><a href="orders.html" class="active">📦 Orders</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>📦 My Orders</h1>
+  <p id="orders-subtitle">Your sweet history</p>
+</div>
+
+<div class="orders-container" id="orders-container">
+  <div style="text-align:center;padding:3rem;font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--text-muted);">🍭 Loading...</div>
+</div>
+
+<script>
+(function() {
+  cvInitFirebase();
+
+  // Cart badge
+  var cart = JSON.parse(localStorage.getItem('cv_cart') || '[]');
+  var badge = document.getElementById('cart-count');
+  if (badge) badge.textContent = cart.reduce(function(s,i){return s+i.qty;},0);
+
+  var STEPS = [
+    {key:'Order Placed',icon:'📋',short:'Placed'},
+    {key:'Preparing',icon:'👨‍🍳',short:'Preparing'},
+    {key:'Packed',icon:'📦',short:'Packed'},
+    {key:'Shipped',icon:'🚚',short:'Shipped'},
+    {key:'Out for Delivery',icon:'🛵',short:'Near You'},
+    {key:'Delivered',icon:'🎉',short:'Done!'}
+  ];
+
+  var CHIP_STYLE = {
+    'Order Placed':    'background:rgba(0,180,255,0.1);border-color:rgba(0,180,255,0.45);color:#0055aa',
+    'Preparing':       'background:rgba(255,143,0,0.1);border-color:rgba(255,143,0,0.45);color:#b34700',
+    'Packed':          'background:rgba(224,64,251,0.1);border-color:rgba(224,64,251,0.45);color:#7a00b5',
+    'Shipped':         'background:rgba(0,120,255,0.1);border-color:rgba(0,120,255,0.45);color:#003d99',
+    'Out for Delivery':'background:rgba(255,26,108,0.1);border-color:rgba(255,26,108,0.45);color:#cc0044',
+    'Delivered':       'background:rgba(0,200,83,0.1);border-color:rgba(0,200,83,0.45);color:#00875a'
+  };
+
+  var container = document.getElementById('orders-container');
+  var subtitle  = document.getElementById('orders-subtitle');
+
+  // ── Get saved phone from last checkout ────────────────
+  var savedCheckout = JSON.parse(localStorage.getItem('cv_checkout') || '{}');
+  var savedPhone    = savedCheckout.phone || '';
+
+  // ── If no phone saved, show phone input gate ──────────
+  if (!savedPhone) {
+    showPhoneGate();
+    return;
+  }
+
+  loadMyOrders(savedPhone);
+
+  // ── Phone gate — ask customer for their phone ─────────
+  function showPhoneGate() {
+    subtitle.textContent = 'Enter your phone to view orders';
+    container.innerHTML =
+      '<div class="phone-gate">' +
+        '<div style="font-size:2.5rem;margin-bottom:.5rem">📱</div>' +
+        '<h3>View Your Orders</h3>' +
+        '<p style="color:var(--text-muted);font-weight:700;font-size:.9rem;margin-bottom:.5rem">Enter the phone number you used when ordering</p>' +
+        '<input type="tel" id="phone-input" placeholder="10-digit phone number" maxlength="10" inputmode="numeric"/>' +
+        '<div id="phone-error" style="color:#cc0044;font-weight:800;font-size:.85rem;margin-bottom:.5rem;display:none">❌ Please enter a valid 10-digit number</div>' +
+        '<button onclick="lookupOrders()" class="btn btn-primary" style="width:100%;padding:.85rem;font-size:1.05rem">🔍 Find My Orders</button>' +
+      '</div>';
+  }
+
+  window.lookupOrders = function() {
+    var phone = document.getElementById('phone-input').value.trim();
+    if (!phone || !/^\d{10}$/.test(phone)) {
+      document.getElementById('phone-error').style.display = 'block'; return;
+    }
+    document.getElementById('phone-error').style.display = 'none';
+    container.innerHTML = '<div style="text-align:center;padding:3rem;font-family:\'Fredoka One\',cursive;font-size:1.2rem;color:var(--text-muted);">🍭 Finding your orders...</div>';
+    loadMyOrders(phone);
+  };
+
+  function loadMyOrders(phone) {
+    cvGetMyOrders(phone, function(orders) {
+      renderOrders(orders, phone);
+    });
+  }
+
+  function renderOrders(orders, phone) {
+    if (!orders || !orders.length) {
+      subtitle.textContent = 'No orders found';
+      container.innerHTML =
+        '<div style="text-align:center;padding:4rem 1rem;">' +
+          '<div style="font-size:5rem;margin-bottom:1rem;animation:floatBob 2s ease-in-out infinite;">📦</div>' +
+          '<h2 style="font-family:\'Fredoka One\',cursive;font-size:2rem;color:var(--text-muted);margin-bottom:.5rem;">No orders yet!</h2>' +
+          '<p style="color:var(--text-muted);margin-bottom:.75rem;">No orders found for <b>' + phone + '</b></p>' +
+          '<button onclick="showPhoneGate()" class="btn btn-secondary" style="margin-right:.5rem">🔄 Try Different Number</button>' +
+          '<a href="products.html" class="btn btn-primary">🛍 Shop Now</a>' +
+        '</div>';
+      return;
+    }
+
+    subtitle.textContent = orders.length + ' order' + (orders.length !== 1 ? 's' : '') + ' for ' + phone;
+
+    var totalSpent = orders.reduce(function(s,o){return s+o.total;},0);
+    var delivered  = orders.filter(function(o){return o.orderStatus==='Delivered';}).length;
+
+    var html =
+      '<div class="admin-stats" style="margin-bottom:2rem;">' +
+        '<div class="stat-card"><span class="stat-value">' + orders.length + '</span><span class="stat-label">Orders</span></div>' +
+        '<div class="stat-card"><span class="stat-value">₹' + totalSpent.toLocaleString('en-IN') + '</span><span class="stat-label">Total Spent</span></div>' +
+        '<div class="stat-card"><span class="stat-value">' + delivered + '</span><span class="stat-label">Delivered</span></div>' +
+      '</div>';
+
+    for (var i = 0; i < orders.length; i++) {
+      var order   = orders[i];
+      var oStatus = order.orderStatus || 'Order Placed';
+      var curIdx  = 0;
+      for (var si = 0; si < STEPS.length; si++) { if (STEPS[si].key === oStatus) { curIdx = si; break; } }
+      var isDelivered = (oStatus === 'Delivered');
+      var chipStyle   = CHIP_STYLE[oStatus] || CHIP_STYLE['Order Placed'];
+      var stepIcon    = STEPS[curIdx].icon;
+
+      var payLabel = order.paymentStatus === 'Paid'
+        ? '<span style="color:#00875a;font-weight:800;font-size:.82rem;">✅ Paid</span>'
+        : '<span style="color:#b34700;font-weight:800;font-size:.82rem;">🕐 Pay on Delivery</span>';
+
+      // Mini stepper
+      var stepperHTML = '<div class="mini-stepper">';
+      for (var st = 0; st < STEPS.length; st++) {
+        var stClass = st < curIdx ? 's-done' : (st === curIdx ? 's-active' : 's-pending');
+        stepperHTML += '<div class="mini-step ' + stClass + '"><div class="mini-dot">' + STEPS[st].icon + '</div><div class="mini-label">' + STEPS[st].short + '</div></div>';
+      }
+      stepperHTML += '</div>';
+
+      // Item rows
+      var itemRows = '';
+      for (var ii = 0; ii < order.items.length; ii++) {
+        var item = order.items[ii];
+        itemRows += '<tr><td>' + (item.emoji||'🍭') + ' ' + item.name + '</td><td>× ' + item.qty + '</td><td>₹' + item.price + '</td><td style="font-weight:800;color:#b34700;">₹' + (item.price*item.qty).toLocaleString('en-IN') + '</td></tr>';
+      }
+      itemRows += '<tr><td colspan="3" style="color:var(--text-muted);">🚚 Delivery</td><td style="font-weight:800;color:' + (order.delivery===0?'#00875a':'#b34700') + ';">' + (order.delivery===0?'FREE':'₹'+order.delivery) + '</td></tr>';
+
+      var detailId = 'det-' + order.id;
+      var delay    = (Math.min(i,8)*0.08).toFixed(2);
+
+      html += '<div class="order-card" style="animation:cardIn 0.4s ease ' + delay + 's both;">';
+      html +=   '<div class="order-header">';
+      html +=     '<div><div class="order-id" style="font-size:.95rem;">🛒 ' + order.id + '</div><div class="order-date">📅 ' + order.date + '</div></div>';
+      html +=     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;"><div class="order-total-badge">₹' + order.total.toLocaleString('en-IN') + '</div>' + payLabel + '</div>';
+      html +=   '</div>';
+      html +=   '<div class="status-chip" style="' + chipStyle + ';">' + stepIcon + ' ' + oStatus + '</div>';
+      html +=   stepperHTML;
+      html +=   '<a href="order-track.html?id=' + order.id + '" class="track-btn' + (isDelivered?' delivered':'') + '">' + (isDelivered?'🎉 Delivered — View Details':'🚚 Track Your Order  →') + '</a>';
+      html +=   '<button class="toggle-btn" onclick="toggleDet(\'' + detailId + '\',this)">▼ View order items</button>';
+      html +=   '<div class="order-details" id="' + detailId + '">';
+      html +=     '<table class="order-items-table" style="margin-top:.6rem;"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead><tbody>' + itemRows + '</tbody></table>';
+      html +=     '<div style="font-size:.85rem;color:var(--text-muted);font-weight:600;margin-top:.75rem;line-height:1.6;">📍 ' + (order.customer&&order.customer.address||'N/A') + '</div>';
+      html +=     '<div style="margin-top:.75rem;"><a href="products.html" class="btn btn-primary btn-sm">🛍 Shop Again</a></div>';
+      html +=   '</div>';
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  }
+
+  window.showPhoneGate = showPhoneGate;
+
+})();
+
+function toggleDet(id, btn) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var open = el.classList.toggle('open');
+  btn.textContent = open ? '▲ Hide order items' : '▼ View order items';
+}
+</script>
+</body>
+</html>
