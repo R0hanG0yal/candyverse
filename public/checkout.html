@@ -89,9 +89,10 @@
 </div>
 
 <script src="checkout.js"></script>
-<!-- Firebase at bottom - never blocks page -->
+<!-- Firebase — loads after page, initialized immediately -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="cv-db.js"></script>
+<script>try{ cvInitFirebase(); }catch(e){ console.warn('Firebase init:',e); }</script>
 </body>
 </html>

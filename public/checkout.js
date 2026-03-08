@@ -51,7 +51,6 @@ function proceedToPayment(){
   var btn=document.getElementById('proceed-btn');
   btn.disabled=true;
 
-  // ── CASH ON DELIVERY ──────────────────────────────────
   if(payment==='cod'){
     btn.textContent='Placing Order...';
     var cart=getCart();
@@ -69,28 +68,32 @@ function proceedToPayment(){
       statusTimestamps:{'Order Placed':Date.now()}
     };
 
-    // ✅ Save to localStorage FIRST — always works
-    try {
+    // Step 1 — Save to localStorage
+    try{
       var orders=JSON.parse(localStorage.getItem('cv_orders')||'[]');
       orders.unshift(order);
       localStorage.setItem('cv_orders',JSON.stringify(orders));
       localStorage.setItem('cv_last_order',JSON.stringify(order));
       localStorage.removeItem('cv_cart');
-    } catch(e){}
+    }catch(e){}
 
-    // ✅ Redirect immediately
-    setTimeout(function(){ window.location.href='order-success.html'; }, 600);
+    // Step 2 — Init Firebase and save, then redirect
+    try{ cvInitFirebase(); }catch(e){}
 
-    // ✅ Try Firebase in background
-    try {
-      if(typeof cvSaveOrder==='function' && typeof CV_CONFIG_VALID!=='undefined' && CV_CONFIG_VALID){
-        cvSaveOrder(order,function(){});
-      }
-    } catch(e){}
+    function goToSuccess(){ window.location.href='order-success.html'; }
+
+    if(typeof CV_DB_READY!=='undefined' && CV_DB_READY && CV_DB_REF){
+      CV_DB_REF.child(order.id).set(order)
+        .then(function(){ goToSuccess(); })
+        .catch(function(){ goToSuccess(); });
+      setTimeout(goToSuccess, 3000); // safety net
+    } else {
+      goToSuccess();
+    }
     return;
   }
 
-  // ── UPI / ONLINE ───────────────────────────────────────
+  // UPI — go to payment page
   btn.textContent='Processing...';
   setTimeout(function(){ window.location.href='payment.html'; },600);
 }

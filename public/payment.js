@@ -32,26 +32,28 @@ function showToast(msg,icon){
     var custLine=checkout.name?'<div style="padding-bottom:.5rem;color:rgba(80,0,40,.75);">👤 '+checkout.name+' · 📱 '+(checkout.phone||'')+'</div>':'';
     summaryEl.innerHTML=custLine+lines+delLine;
   }
-})();
 
-var upiBtn=document.getElementById('upi-copy');
-if(upiBtn){
-  upiBtn.addEventListener('click',function(){
-    navigator.clipboard.writeText('candyverse@upi').then(function(){
-      var lbl=document.getElementById('copy-label');
-      if(lbl){ lbl.textContent='✓ copied!'; setTimeout(function(){ lbl.textContent='tap to copy'; },2000); }
-    }).catch(function(){});
-  });
-}
+  var upiBtn=document.getElementById('upi-copy');
+  if(upiBtn){
+    upiBtn.addEventListener('click',function(){
+      navigator.clipboard.writeText('candyverse@upi').then(function(){
+        var lbl=document.getElementById('copy-label');
+        if(lbl){lbl.textContent='✓ copied!';setTimeout(function(){lbl.textContent='tap to copy';},2000);}
+      }).catch(function(){});
+    });
+  }
+})();
 
 function confirmPayment(){
   var btn=document.getElementById('paid-btn');
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Saving...'; }
+  btn.disabled=true;
+  btn.textContent='⏳ Saving...';
 
   var cart=getCart();
   if(!cart.length){ window.location.href='products.html'; return; }
 
-  var checkout=JSON.parse(localStorage.getItem('cv_checkout')||'{}');
+  var checkout={};
+  try{checkout=JSON.parse(localStorage.getItem('cv_checkout')||'{}');}catch(e){}
   var subtotal=getCartTotal(cart), delivery=subtotal>=499?0:49, total=subtotal+delivery;
 
   var order={
@@ -71,23 +73,30 @@ function confirmPayment(){
     statusTimestamps:{'Order Placed':Date.now()}
   };
 
-  // ✅ STEP 1 — Save to localStorage IMMEDIATELY (always works)
-  try {
+  // Step 1 — Save to localStorage (instant, always works)
+  try{
     var orders=JSON.parse(localStorage.getItem('cv_orders')||'[]');
     orders.unshift(order);
     localStorage.setItem('cv_orders',JSON.stringify(orders));
     localStorage.setItem('cv_last_order',JSON.stringify(order));
     localStorage.removeItem('cv_cart');
-  } catch(e){}
+  }catch(e){}
 
-  // ✅ STEP 2 — Redirect immediately, don't wait for Firebase
-  showToast('🎉 Order placed! Redirecting...','🎊');
-  setTimeout(function(){ window.location.href='order-success.html'; }, 800);
+  // Step 2 — Save to Firebase then redirect
+  // Initialize Firebase right now if not already done
+  try{ cvInitFirebase(); }catch(e){}
 
-  // ✅ STEP 3 — Try Firebase in background (doesn't block redirect)
-  try {
-    if(typeof cvSaveOrder==='function' && typeof CV_CONFIG_VALID!=='undefined' && CV_CONFIG_VALID){
-      cvSaveOrder(order, function(){});
-    }
-  } catch(e){}
+  function goToSuccess(){ window.location.href='order-success.html'; }
+
+  if(typeof CV_DB_READY !== 'undefined' && CV_DB_READY && CV_DB_REF){
+    // Firebase is ready — save then redirect
+    CV_DB_REF.child(order.id).set(order)
+      .then(function(){ goToSuccess(); })
+      .catch(function(){ goToSuccess(); }); // even if Firebase fails, still redirect
+    // Safety net — redirect after 3s no matter what
+    setTimeout(goToSuccess, 3000);
+  } else {
+    // Firebase not ready — redirect immediately
+    goToSuccess();
+  }
 }
