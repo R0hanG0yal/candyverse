@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CandyVerse 📋 Checkout</title>
-  <link rel="stylesheet" href="style.css" />
-
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
@@ -19,14 +18,14 @@
 </nav>
 
 <div class="page-header">
-  <h1>📋 Delivery Details</h1>
-  <p>Almost there — where should we send your candy?</p>
+  <h1>📋 Checkout</h1>
+  <p>Almost there! Fill in your delivery details</p>
 </div>
 
 <!-- Progress Steps -->
 <div style="display:flex;justify-content:center;gap:0;margin-bottom:2rem;position:relative;z-index:1;">
   <div style="display:flex;align-items:center;gap:0.5rem;">
-    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00c853,#00e676);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;box-shadow:0 0 15px rgba(0,200,83,0.5);">✓</div>
+    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00c853,#00e676);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;">✓</div>
     <span style="font-weight:700;font-size:0.9rem;color:#00e676;">Cart</span>
   </div>
   <div style="width:50px;height:2px;background:linear-gradient(90deg,#00e676,#FF6B9D);margin:0 0.5rem;align-self:center;"></div>
@@ -34,65 +33,59 @@
     <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF3D7F,#B06BFF);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;box-shadow:0 0 15px rgba(255,61,127,0.5);">2</div>
     <span style="font-weight:700;font-size:0.9rem;color:var(--pink);">Details</span>
   </div>
-  <div style="width:50px;height:2px;background:rgba(255,255,255,0.15);margin:0 0.5rem;align-self:center;"></div>
+  <div style="width:50px;height:2px;background:rgba(255,255,255,0.2);margin:0 0.5rem;align-self:center;"></div>
   <div style="display:flex;align-items:center;gap:0.5rem;">
-    <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;color:var(--text-muted);">3</div>
-    <span style="font-weight:700;font-size:0.9rem;color:var(--text-muted);">Payment</span>
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;">3</div>
+    <span style="font-weight:700;font-size:0.9rem;opacity:0.5;">Payment</span>
   </div>
 </div>
 
-<div class="form-container">
-  <div class="form-card">
+<div class="checkout-container">
+  <div class="checkout-card">
 
-    <!-- Order mini summary -->
-    <div id="order-mini-summary" style="margin-bottom:1.8rem;padding:1rem;background:rgba(255,107,157,0.08);border:1px solid rgba(255,107,157,0.2);border-radius:12px;">
-      <div style="font-family:'Fredoka One',cursive;color:var(--pink);margin-bottom:0.5rem;">🛒 Your Order</div>
-      <div id="mini-items" style="font-size:0.9rem;color:var(--text-muted);"></div>
-      <div id="mini-total" style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--yellow);margin-top:0.5rem;"></div>
+    <!-- Order Mini Summary -->
+    <div style="background:rgba(255,255,255,0.35);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;border:1.5px solid rgba(255,77,143,0.2);">
+      <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:var(--text-muted);margin-bottom:0.5rem;">🛒 Your Order</div>
+      <div id="mini-items"></div>
+      <div style="margin-top:0.5rem;font-weight:800;color:var(--hot-pink);" id="mini-total"></div>
     </div>
 
-    <h2 style="font-family:'Fredoka One',cursive;font-size:1.5rem;margin-bottom:1.5rem;color:var(--text-muted);">📬 Delivery Info</h2>
+    <!-- Form -->
+    <div id="form-error" style="display:none;background:rgba(255,0,60,0.1);border:2px solid rgba(255,0,60,0.3);border-radius:12px;padding:0.75rem 1rem;margin-bottom:1rem;font-weight:800;color:#cc0044;font-size:0.9rem;"></div>
 
     <div class="form-group">
-      <label>Full Name</label>
-      <input type="text" id="name" placeholder="Your sweet name" autocomplete="name" />
+      <label class="form-label">👤 Full Name</label>
+      <input type="text" id="name" class="form-input" placeholder="Your full name"/>
     </div>
-
     <div class="form-group">
-      <label>Phone Number</label>
-      <input type="tel" id="phone" placeholder="10-digit mobile number" maxlength="10" autocomplete="tel" />
+      <label class="form-label">📱 Phone Number</label>
+      <input type="tel" id="phone" class="form-input" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric"/>
     </div>
-
     <div class="form-group">
-      <label>Delivery Address</label>
-      <textarea id="address" placeholder="House No, Street, Area, City, PIN code" rows="3"></textarea>
+      <label class="form-label">📍 Delivery Address</label>
+      <textarea id="address" class="form-input" rows="3" placeholder="Full address with house no, street, city, pincode"></textarea>
     </div>
-
     <div class="form-group">
-      <label>Payment Method</label>
-      <select id="payment-method">
+      <label class="form-label">💳 Payment Method</label>
+      <select id="payment-method" class="form-input">
         <option value="">Select payment method</option>
         <option value="upi">📱 UPI / QR Code</option>
-        <option value="card">💳 Debit / Credit Card</option>
-        <option value="netbanking">🏦 Net Banking</option>
         <option value="cod">💵 Cash on Delivery</option>
       </select>
     </div>
 
-    <div id="form-error" style="color:#ff5252;font-size:0.9rem;font-weight:700;margin-bottom:1rem;display:none;padding:0.75rem;background:rgba(255,82,82,0.1);border-radius:8px;border-left:3px solid #ff5252;"></div>
-
-    <button class="btn btn-primary w-100 btn-lg" id="proceed-btn" onclick="proceedToPayment()">
-      💳 Proceed To Payment →
+    <button id="proceed-btn" class="btn btn-primary w-100 btn-lg" onclick="proceedToPayment()" style="margin-top:1rem;">
+      Continue →
     </button>
 
   </div>
 </div>
 
 <script src="checkout.js"></script>
-<!-- Firebase — loads after page, initialized immediately -->
+<!-- Firebase at bottom -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="cv-db.js"></script>
-<script>try{ cvInitFirebase(); }catch(e){ console.warn('Firebase init:',e); }</script>
+<script>try{ cvInitFirebase(); }catch(e){}</script>
 </body>
 </html>
